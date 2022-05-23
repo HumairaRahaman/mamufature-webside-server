@@ -158,23 +158,25 @@ function verifyJWT(req, res, next) {
     const orders = await cursor.toArray();
     res.send(orders);
 });
-//review api
+//all review api
 app.get('/reviews', async(req,res)=>{
   const query = {};
   const cursor = reviewCollection.find(query);
   const reviews = await cursor.toArray();
   res.send(reviews);
 });
-// //all doctors
-// app.get('/doctor',verifyJWT,verifyAdmin, async(req,res)=>{
-//   const doctors = await doctorCollection.find().toArray();
-//   res.send(doctors);
-//   })
+
   
-  //add doctor
+  //add review
       app.post("/review",async(req,res)=>{
         const doctor = req.body;
         const result = await reviewCollection.insertOne(doctor);
+        res.send(result)
+      })
+  //add product
+      app.post("/product",async(req,res)=>{
+        const product = req.body;
+        const result = await productCollection.insertOne(product);
         res.send(result)
       })
   
