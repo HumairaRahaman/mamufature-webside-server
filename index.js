@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const ObjectId = require('mongodb').ObjectId;
 const app = express();
@@ -16,28 +17,29 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 // //jwt fun for appointment
-// function verifyJWT(req, res, next) {
-//   const authHeader = req.headers.authorization;
-//   if (!authHeader) {
-//     return res.status(401).send({ message: "UnAuthorized access" });
-//   }
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "UnAuthorized access" });
+  }
 
-//   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
-//     if (err) {
-//       return res.status(403).send({ message: "Forbidden Access" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
  async function run(){
     try{
         await client.connect();
         const productCollection = client.db('super_hand_tools').collection('products');
         const reviewCollection = client.db('super_hand_tools').collection('reviews');
-        const userInfoCollection = client.db('super_hand_tools').collection('userInfo');
+        const userCollection = client.db('super_hand_tools').collection('users');
+        const orderCollection = client.db('super_hand_tools').collection('orders');
         // const paymentCollection = client.db("super_hand_tools").collection("payments");
 
 
@@ -82,23 +84,24 @@ const client = new MongoClient(uri, {
     
     // });
 
-    // //for user
-    // app.put("/user/:email", async (req, res) => {
-    //   const email = req.params.email;
-    //   const user = req.body;
-    //   const filter = { email: email };
-    //   const options = { upsert: true };
-    //   const updateDoc = {
-    //     $set: user,
-    //   };
-    //   const result = await userCollection.updateOne(filter, updateDoc, options);
-    //   const token = jwt.sign(
-    //     { email: email },
-    //     process.env.ACCESS_TOKEN_SECRET,
-    //     { expiresIn: "1h" }
-    //   );
-    //   res.send({ result, token });
-    // });
+    //for user
+    app.put("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
+      const token = jwt.sign(
+        { email: email },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "9h" }
+      );
+      res.send({ result, token });
+    });
+
 
         //product api
         app.get('/products', async(req,res)=>{
@@ -123,6 +126,39 @@ const client = new MongoClient(uri, {
             const reviews = await cursor.toArray();
             res.send(reviews);
         });
+
+
+         //for Appointment
+    app.post("/order", async (req, res) => {
+      const userOrder = req.body;
+      const query = {
+        product: userOrder.treatment,
+        
+        user: userOrder.user,
+      };
+      const exists = await orderCollection.findOne(query);
+      if (exists) {
+        return res.send({ success: false, userOrder: exists });
+      }
+      const result = await orderCollection.insertOne(userOrder);
+      return res.send({ success: true, result });
+    });
+
+     //for dashboard
+     app.get("/order",verifyJWT, async (req, res) => {
+      const user = req.query.user;
+
+      const decodedEmail = req.decoded.email;
+      if (user === decodedEmail) {
+        const query = { user: user };
+        const userOrder = await orderCollection.find(query).toArray();
+        return res.send(userOrder);
+      } else {
+       return res.status(403).send({ message: "forbidden access" });
+       }
+    });
+
+  
     }
     finally{
 
