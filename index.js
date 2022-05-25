@@ -126,7 +126,15 @@ async function run() {
       const products = await cursor.toArray();
       res.send(products);
     });
+    // //order status api
+    // app.get("/orderStatus", async (req, res) => {
+    //   const query = {};
+    //   const cursor = productCollection.find(query);
+    //   const products = await cursor.toArray();
+    //   res.send(products);
+    // });
 
+    
     //single product
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -158,6 +166,18 @@ async function run() {
       return res.send({ success: true, result });
     });
 
+    //order status
+    app.put("/orders/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const filter = { _id: ObjectId(id) };
+
+      const updateDoc = {
+        $set: { orderStatus: "sipping" },
+      };
+      const result = await productCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
     //for dashboard
     app.get("/orders", verifyJWT, async (req, res) => {
       const user = req.query.user;
@@ -216,11 +236,13 @@ async function run() {
     //for payment database
     app.patch("/orders/:id", async (req, res) => {
       const id = req.params.id;
+      const status = req.params.orderStatus;
       const payment = req.body;
       const filter = { _id: ObjectId(id) };
       const updatedDoc = {
         $set: {
           paid: true,
+          orderStatus: status,
           transactionId: payment.transactionId,
         },
       };
