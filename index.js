@@ -134,7 +134,6 @@ async function run() {
     //   res.send(products);
     // });
 
-    
     //single product
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -169,13 +168,11 @@ async function run() {
     //order status
     app.put("/orders/:id", async (req, res) => {
       const id = req.params.id;
-
-      const filter = { _id: ObjectId(id) };
-
+      const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: { orderStatus: "sipping" },
       };
-      const result = await productCollection.updateOne(filter, updateDoc);
+      const result = await orderCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
     //for dashboard
@@ -242,7 +239,7 @@ async function run() {
       const updatedDoc = {
         $set: {
           paid: true,
-          orderStatus: status,
+          orderStatus: "paid",
           transactionId: payment.transactionId,
         },
       };
